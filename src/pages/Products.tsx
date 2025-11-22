@@ -132,9 +132,10 @@ const Products = () => {
 
               <div className="flex items-center justify-end gap-2">
                 <button type="button" className="px-3 py-2 rounded-md" onClick={() => setOpen(false)}>Cancel</button>
-                <PrimaryButton type="submit" disabled={create.isLoading}>
-                  {create.isLoading ? "Saving..." : "Save Product"}
+                <PrimaryButton type="submit" disabled={create.isPending}>
+                    {create.isPending ? "Saving..." : "Save Product"}
                 </PrimaryButton>
+
               </div>
             </form>
           </div>
