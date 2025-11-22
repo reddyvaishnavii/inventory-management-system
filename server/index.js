@@ -101,6 +101,15 @@ app.get("/receipts", async (req, res) => {
         created_at
        FROM receipts
        ORDER BY id DESC`
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET /receipts error:", err);
+    res.status(500).json({ error: "Failed to fetch receipts" });
+  }
+});
+
 // GET /warehouses - get all warehouses
 app.get("/warehouses", async (req, res) => {
   try {
@@ -115,8 +124,8 @@ app.get("/warehouses", async (req, res) => {
 
     res.json(rows);
   } catch (err) {
-    console.error("GET /receipts error:", err);
-    res.status(500).json({ error: "Failed to fetch receipts" });
+    console.error("GET /warehouses error:", err);
+    res.status(500).json({ error: "Failed to fetch warehouses" });
   }
 });
 
@@ -129,12 +138,16 @@ app.post("/receipts", async (req, res) => {
 
     // Proper validation
     if (!supplier_name || !quantity || quantity <= 0) {
-      return res.status(400).json({ error: "Supplier name and valid quantity are required" });
+      return res
+        .status(400)
+        .json({ error: "Supplier name and valid quantity are required" });
     }
 
     // Optional: require product_name if you want to update stock
     if (!product_name) {
-      return res.status(400).json({ error: "Product name is required to update stock" });
+      return res
+        .status(400)
+        .json({ error: "Product name is required to update stock" });
     }
 
     const receiptNumber = `RCPT-${Date.now()}`;
@@ -179,13 +192,9 @@ app.post("/receipts", async (req, res) => {
     }
   } catch (err) {
     console.error("POST /receipts error:", err);
-    res.status(500).json({ 
-      error: err.message || "Failed to create receipt" 
+    res.status(500).json({
+      error: err.message || "Failed to create receipt",
     });
-  }
-});
-    console.error("GET /warehouses error:", err);
-    res.status(500).json({ error: "Failed to fetch warehouses" });
   }
 });
 
