@@ -80,8 +80,28 @@ app.post("/products", async (req, res) => {
   }
 });
 
-/* ---------------------- WAREHOUSES ---------------------- */
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
+// ====================== RECEIPTS ROUTES ======================
+
+// GET /receipts → fetch all receipts
+app.get("/receipts", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+        id,
+        receipt_number,
+        supplier_name,
+        status,
+        total_items,
+        total_quantity,
+        created_at
+       FROM receipts
+       ORDER BY id DESC`
+// GET /warehouses - get all warehouses
 app.get("/warehouses", async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -95,6 +115,75 @@ app.get("/warehouses", async (req, res) => {
 
     res.json(rows);
   } catch (err) {
+    console.error("GET /receipts error:", err);
+    res.status(500).json({ error: "Failed to fetch receipts" });
+  }
+});
+
+// POST /receipts → create new receipt
+app.post("/receipts", async (req, res) => {
+  try {
+    console.log("POST /receipts received:", req.body);
+
+    const { supplier_name, product_name, quantity } = req.body;
+
+    // Proper validation
+    if (!supplier_name || !quantity || quantity <= 0) {
+      return res.status(400).json({ error: "Supplier name and valid quantity are required" });
+    }
+
+    // Optional: require product_name if you want to update stock
+    if (!product_name) {
+      return res.status(400).json({ error: "Product name is required to update stock" });
+    }
+
+    const receiptNumber = `RCPT-${Date.now()}`;
+
+    // Start transaction for safety
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Insert receipt
+      const [receiptResult] = await connection.query(
+        `INSERT INTO receipts 
+         (receipt_number, supplier_name, total_items, total_quantity, status) 
+         VALUES (?, ?, ?, ?, 'Done')`,
+        [receiptNumber, supplier_name, 1, quantity]
+      );
+
+      // 2. Update product stock
+      const [updateResult] = await connection.query(
+        `UPDATE products 
+         SET initial_stock = initial_stock + ? 
+         WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))`,
+        [quantity, product_name]
+      );
+
+      if (updateResult.affectedRows === 0) {
+        throw new Error(`Product "${product_name}" not found`);
+      }
+
+      await connection.commit();
+
+      res.json({
+        message: "Receipt created & stock updated successfully",
+        receipt_id: receiptResult.insertId,
+        receipt_number: receiptNumber,
+      });
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error("POST /receipts error:", err);
+    res.status(500).json({ 
+      error: err.message || "Failed to create receipt" 
+    });
+  }
+});
     console.error("GET /warehouses error:", err);
     res.status(500).json({ error: "Failed to fetch warehouses" });
   }
