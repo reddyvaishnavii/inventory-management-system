@@ -1,0 +1,29 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+build/
+**/dist/
+**/build/
+
+# Env files
+.env
+*.env
+
+# Logs & caches
+*.log
+logs/
+.cache/
+.temp/
+*.cache
+.vite
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# OS
+Thumbs.db
