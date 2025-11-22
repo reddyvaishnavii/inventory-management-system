@@ -1,25 +1,26 @@
 import { ReactNode } from "react";
 
-interface ListCardProps {
+// components/ListCard.tsx
+
+export interface ListCardProps {
   title: string;
-  subtitle?: string;
-  icon?: ReactNode;
+  subtitle: string;
+  icon: React.ReactNode;
+  onClick?: () => void; // <-- FIX ADDED
 }
 
-export const ListCard = ({ title, subtitle, icon }: ListCardProps) => {
+export function ListCard({ title, subtitle, icon, onClick }: ListCardProps) {
   return (
-    <div className="bg-card rounded-xl p-5 shadow-sm border border-border hover:shadow-md transition-all duration-200 flex items-center gap-4">
-      {icon && (
-        <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-          {icon}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <h3 className="text-foreground font-semibold text-base truncate">{title}</h3>
-        {subtitle && (
-          <p className="text-muted-foreground text-sm mt-0.5 truncate">{subtitle}</p>
-        )}
+    <div
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 bg-card border rounded-xl shadow-sm cursor-pointer hover:bg-muted transition"
+    >
+      <div>{icon}</div>
+
+      <div>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
     </div>
   );
-};
+}

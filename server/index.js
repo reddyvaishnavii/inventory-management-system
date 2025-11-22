@@ -80,6 +80,58 @@ app.post("/products", async (req, res) => {
   }
 });
 
+// GET /warehouses - get all warehouses
+app.get("/warehouses", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+         w_id AS id,
+         w_name AS name,
+         w_address AS address
+       FROM warehouse
+       ORDER BY w_id DESC`
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET /warehouses error:", err);
+    res.status(500).json({ error: "Failed to fetch warehouses" });
+  }
+});
+
+// POST /warehouses - create new warehouse
+app.post("/warehouses", async (req, res) => {
+  try {
+    console.log("POST /warehouses received:", req.body);
+
+    const { name, address } = req.body;
+
+    const [result] = await db.query(
+      `INSERT INTO warehouse (w_name, w_address)
+       VALUES (?, ?)`,
+      [name, address]
+    );
+
+    const newId = result.insertId;
+
+    const [rows] = await db.query(
+      `SELECT 
+         w_id AS id,
+         w_name AS name,
+         w_address AS address
+       FROM warehouse
+       WHERE w_id = ?`,
+      [newId]
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("POST /warehouses error:", err);
+    res.status(500).json({ error: "Failed to create warehouse" });
+  }
+});
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
