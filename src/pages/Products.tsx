@@ -10,12 +10,15 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+const API_URL = "http://localhost:3000";
+
 const productSchema = z.object({
   name: z.string().min(2, "Name too short"),
   sku: z.string().optional(),
   category: z.string().optional(),
   uom: z.string().optional(),
   stock_total: z.number().min(0).optional(),
+  warehouse: z.number().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -25,14 +28,25 @@ const Products = () => {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
 
-  // object form for useQuery
+  // Fetch warehouses for dropdown
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/warehouses`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch warehouses");
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Fetch products
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts,
     staleTime: 1000 * 60,
   });
 
-  // object form for useMutation
+  // Create product mutation
   const create = useMutation({
     mutationFn: (payload: Partial<Product>) => createProduct(payload),
     onSuccess: (newProduct) => {
@@ -46,13 +60,18 @@ const Products = () => {
     (p.sku ?? "").toLowerCase().includes(query.trim().toLowerCase())
   );
 
-  const { register, handleSubmit, formState } = useForm<ProductFormValues>({
+  const { register, handleSubmit, formState, reset } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: "", sku: "", category: "", uom: "", stock_total: 0 },
+    defaultValues: { name: "", sku: "", category: "", uom: "", stock_total: 0, warehouse: undefined },
   });
 
   const onSubmit = (data: ProductFormValues) => {
     create.mutate(data);
+  };
+
+  const handleOpenModal = () => {
+    reset();
+    setOpen(true);
   };
 
   return (
@@ -74,7 +93,7 @@ const Products = () => {
                 placeholder="Search by name or SKU"
                 className="px-3 py-2 rounded-md bg-input border border-border text-sm"
               />
-              <PrimaryButton onClick={() => setOpen(true)}>Add Product</PrimaryButton>
+              <PrimaryButton onClick={handleOpenModal}>Add Product</PrimaryButton>
             </div>
           </div>
 
@@ -88,7 +107,7 @@ const Products = () => {
               <ListCard
                 key={product.id}
                 title={product.name}
-                subtitle={`${product.category ?? "—"} · Stock: ${product.stock_total ?? 0}`}
+                subtitle={`SKU: ${product.sku ?? "—"} · ${product.category ?? "—"} · Stock: ${product.stock_total ?? 0}`}
                 icon={<Package size={20} />}
               />
             ))}
@@ -96,7 +115,7 @@ const Products = () => {
         </div>
       </main>
 
-      {/* Modal (very small inline modal) */}
+      {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md bg-card rounded-lg p-6 border border-border">
@@ -130,12 +149,26 @@ const Products = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1">Warehouse</label>
+                <select 
+                  {...register("warehouse", { valueAsNumber: true })} 
+                  className="w-full px-3 py-2 rounded-md bg-input border border-border"
+                >
+                  <option value="">Select warehouse (optional)</option>
+                  {warehouses.map((w: any) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-center justify-end gap-2">
                 <button type="button" className="px-3 py-2 rounded-md" onClick={() => setOpen(false)}>Cancel</button>
                 <PrimaryButton type="submit" disabled={create.isPending}>
-                    {create.isPending ? "Saving..." : "Save Product"}
+                  {create.isPending ? "Saving..." : "Save Product"}
                 </PrimaryButton>
-
               </div>
             </form>
           </div>

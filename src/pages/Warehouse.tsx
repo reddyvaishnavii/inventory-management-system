@@ -3,7 +3,6 @@ import { ListCard } from "@/components/ListCard";
 import { Warehouse as WarehouseIcon, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 
-// Change this if your backend URL changes
 const API_URL = "http://localhost:3000";
 
 const WarehousePage = () => {
@@ -124,7 +123,7 @@ const WarehousePage = () => {
                 <ListCard
                   key={warehouse.id}
                   title={warehouse.name}
-                  subtitle={warehouse.address}
+                  subtitle={`${warehouse.address}${warehouse.product_count > 0 ? ` · ${warehouse.product_count} products` : ''}`}
                   icon={<WarehouseIcon size={20} className="text-primary" />}
                   onClick={() => console.log("Go to warehouse:", warehouse.id)}
                 />
