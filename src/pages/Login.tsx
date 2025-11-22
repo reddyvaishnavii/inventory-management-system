@@ -9,9 +9,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // simple client-side validation (backend will validate for real)
+  
     if (!email.trim()) {
       toast.error("Please enter your email");
       return;
@@ -20,11 +20,35 @@ const Login = () => {
       toast.error("Please enter your password");
       return;
     }
+  
+    try {
+      const res = await fetch("http://localhost:8000/api/auth/login", {
 
-    // TODO: call backend /auth/login -> if success store token & redirect
-    toast.success("Login successful!");
-    navigate("/dashboard");
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        toast.error(data.message || "Invalid credentials");
+        return;
+      }
+  
+      // Save JWT
+      localStorage.setItem("token", data.token);
+  
+      toast.success("Logged in successfully!");
+      navigate("/dashboard");
+  
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
+    }
   };
+  
+  
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
