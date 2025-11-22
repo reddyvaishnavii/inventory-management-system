@@ -21,6 +21,8 @@ app.use(
 
 app.use(express.json());
 
+/* ---------------------- PRODUCTS ---------------------- */
+
 // GET /products
 app.get("/products", async (req, res) => {
   try {
@@ -47,8 +49,6 @@ app.get("/products", async (req, res) => {
 // POST /products
 app.post("/products", async (req, res) => {
   try {
-    console.log("POST /products received:", req.body);
-
     const { name, sku, category, uom, stock_total } = req.body;
 
     const [result] = await db.query(
@@ -189,11 +189,8 @@ app.post("/receipts", async (req, res) => {
   }
 });
 
-// POST /warehouses - create new warehouse
 app.post("/warehouses", async (req, res) => {
   try {
-    console.log("POST /warehouses received:", req.body);
-
     const { name, address } = req.body;
 
     const [result] = await db.query(
@@ -221,8 +218,79 @@ app.post("/warehouses", async (req, res) => {
   }
 });
 
+/* ---------------------- ADJUSTMENTS ---------------------- */
 
-// Start server
+// GET /adjustments (MIRRORING warehouse GET STYLE)
+app.get("/adjustments", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+        a.id,
+        a.product_id,
+        a.amount,
+        a.reason,
+        a.type,
+        a.date,
+        p.name AS product_name,
+        p.initial_stock AS current_stock
+       FROM adjustments a
+       LEFT JOIN products p ON p.product_id = a.product_id
+       ORDER BY a.id DESC`
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET /adjustments error:", err);
+    res.status(500).json({ error: "Failed to fetch adjustments" });
+  }
+});
+
+// POST /adjustments — identical structure to your /products POST
+app.post("/adjustments", async (req, res) => {
+  try {
+    const { product_id, amount, reason, type } = req.body;
+
+    // 1. Insert into adjustments table
+    const [result] = await db.query(
+      `INSERT INTO adjustments (product_id, amount, reason, type)
+       VALUES (?, ?, ?, ?)`,
+      [product_id, amount, reason, type]
+    );
+
+    // 2. Update product stock
+    await db.query(
+      `UPDATE products 
+       SET initial_stock = initial_stock + ?
+       WHERE product_id = ?`,
+      [amount, product_id]
+    );
+
+    // 3. Fetch the full new adjustment with product_name
+    const [rows] = await db.query(
+      `SELECT 
+        a.id,
+        a.product_id,
+        a.amount,
+        a.reason,
+        a.type,
+        a.date,
+        p.name AS product_name,
+        p.initial_stock AS current_stock
+      FROM adjustments a
+      LEFT JOIN products p ON p.product_id = a.product_id
+      WHERE a.id = ?`,
+      [result.insertId]
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("POST /adjustments error:", err);
+    res.status(500).json({ error: "Failed to create adjustment" });
+  }
+});
+
+/* ---------------------- START SERVER ---------------------- */
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
