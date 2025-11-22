@@ -15,6 +15,15 @@ const Receipts = () => {
     { id: "004", supplier: "TileMaster Pro", product: "Ceramic Tiles", quantity: 200, date: "2024-01-18" },
     { id: "005", supplier: "BrightLight Solutions", product: "LED Light Bulbs", quantity: 150, date: "2024-01-19" },
   ]);
+
+  const [products, setProducts] = useState<{ id: number; name: string }[]>([]);
+
+useEffect(() => {
+  // Fetch products for dropdown
+  fetch("http://localhost:3000/products")
+    .then(res => res.json())
+    .then(data => setProducts(data));
+}, []);
   useEffect(() => {
   fetch("http://localhost:3000/receipts")
     .then((res) => res.json())
@@ -132,15 +141,22 @@ useEffect(() => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="product">Product</Label>
-                    <Input
-                      id="product"
-                      value={formData.product}
-                      onChange={(e) => setFormData({ ...formData, product: e.target.value })}
-                      placeholder="Enter product name"
-                      required
-                    />
-                  </div>
+  <Label htmlFor="product">Product</Label>
+  <select
+    id="product"
+    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+    value={formData.product}
+    onChange={(e) => setFormData({ ...formData, product: e.target.value })}
+    required
+  >
+    <option value="">Select a product</option>
+    {products.map((p) => (
+      <option key={p.id} value={p.name}>
+        {p.name}
+      </option>
+    ))}
+  </select>
+</div>
                   <div>
                     <Label htmlFor="quantity">Quantity Received</Label>
                     <Input
