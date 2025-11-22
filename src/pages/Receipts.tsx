@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { ListCard } from "@/components/ListCard";
 import { Receipt, Plus } from "lucide-react";
@@ -15,6 +15,22 @@ const Receipts = () => {
     { id: "004", supplier: "TileMaster Pro", product: "Ceramic Tiles", quantity: 200, date: "2024-01-18" },
     { id: "005", supplier: "BrightLight Solutions", product: "LED Light Bulbs", quantity: 150, date: "2024-01-19" },
   ]);
+  useEffect(() => {
+  fetch("http://localhost:3000/receipts")
+    .then((res) => res.json())
+    .then((data) => {
+      const formatted = data.map((item: any) => ({
+        id: String(item.id).padStart(3, "0"),
+        supplier: item.supplier_name,
+        product: "N/A",
+        quantity: item.total_quantity,
+        date: item.created_at?.split("T")[0],
+      }));
+
+      setReceipts(formatted);
+    });
+}, []);
+
 
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,21 +39,62 @@ const Receipts = () => {
     quantity: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const newReceipt = {
-      id: String(receipts.length + 1).padStart(3, "0"),
-      supplier: formData.supplier,
-      product: formData.product,
-      quantity: parseInt(formData.quantity),
-      date: new Date().toISOString().split('T')[0],
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setReceipts([...receipts, newReceipt]);
+  const payload = {
+    supplier_name: formData.supplier,
+    product_name: formData.product,        // ← now sent!
+    quantity: parseInt(formData.quantity), // ← match backend expectation
+  };
+
+  try {
+    const response = await fetch("http://localhost:3000/receipts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert(error.error || "Failed to create receipt");
+      return;
+    }
+
+    // Reset form
     setFormData({ supplier: "", product: "", quantity: "" });
     setIsOpen(false);
-  };
+
+    // Refresh list
+    await loadReceipts();
+  } catch (err) {
+    console.error(err);
+    alert("Network error");
+  }
+};
+
+const loadReceipts = async () => {
+  try {
+    const res = await fetch("http://localhost:3000/receipts");
+    const data = await res.json();
+    const formatted = data.map((item: any) => ({
+      id: String(item.id).padStart(3, "0"),
+      supplier: item.supplier_name,
+      product: "N/A", // You can improve this later with JOIN
+      quantity: item.total_quantity,
+      date: item.created_at?.split("T")[0],
+    }));
+    setReceipts(formatted);
+  } catch (err) {
+    console.error("Failed to load receipts", err);
+  }
+};
+
+// Call it in useEffect and after submit
+useEffect(() => {
+  loadReceipts();
+}, []);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,6 +175,7 @@ const Receipts = () => {
       </main>
     </div>
   );
+  
 };
 
 export default Receipts;
